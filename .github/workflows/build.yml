@@ -1,7 +1,7 @@
 name: Build TWA APK with Bubblewrap
 
 on:
-  workflow_dispatch: # 支持网页端手动点击按钮触发
+  workflow_dispatch:
 
 jobs:
   build:
@@ -27,10 +27,8 @@ jobs:
 
       - name: Configure Bubblewrap Environment
         run: |
-          # 自动接受 GitHub 自带 Android SDK 的许可证
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
-          # 预先写入 Bubblewrap 全局配置，避免在 CI 无终端环境下弹出交互式输入导致挂起
           mkdir -p ~/.bubblewrap
           cat <<EOF > ~/.bubblewrap/config.json
           {
@@ -54,10 +52,14 @@ jobs:
 
       - name: Generate Android Project & Build APK
         run: |
-          # 根据仓库中的 twa-manifest.json 生成 Android 工程结构
+          # 启动本地后台服务提供 icon.png，避免外部网络与 Cloudflare 拦截
+          python3 -m http.server 8080 &
+          sleep 2
+
+          # 根据 twa-manifest.json 抓取本地图标并生成工程
           bubblewrap update --skipPwaValidation
 
-          # 编译并签名生成正式版 APK
+          # 编译并签名正式版 APK
           bubblewrap build \
             --signingKeyPath=./android.keystore \
             --signingKeyAlias=android \
