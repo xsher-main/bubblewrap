@@ -17,9 +17,6 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -27,6 +24,20 @@ jobs:
 
       - name: Install Google Bubblewrap CLI
         run: npm install -g @bubblewrap/cli
+
+      - name: Configure Bubblewrap Environment
+        run: |
+          # 自动接受 GitHub 自带 Android SDK 的许可证
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
+          # 预先写入 Bubblewrap 全局配置，避免在 CI 无终端环境下弹出交互式输入导致挂起
+          mkdir -p ~/.bubblewrap
+          cat <<EOF > ~/.bubblewrap/config.json
+          {
+            "jdkPath": "$JAVA_HOME",
+            "androidSdkPath": "$ANDROID_HOME"
+          }
+          EOF
 
       - name: Generate Android Signing Keystore
         run: |
@@ -41,11 +52,13 @@ jobs:
             -keypass android \
             -dname "CN=ChatGPT TWA, OU=App, O=Self, L=City, S=State, C=US"
 
-      - name: Build Android APK
+      - name: Generate Android Project & Build APK
         run: |
-          # 自动注入密码并构建，跳过在线 Manifest 探测以绕过 Cloudflare 拦截
+          # 根据仓库中的 twa-manifest.json 生成 Android 工程结构
+          bubblewrap update --skipPwaValidation
+
+          # 编译并签名生成正式版 APK
           bubblewrap build \
-            --manifest=twa-manifest.json \
             --signingKeyPath=./android.keystore \
             --signingKeyAlias=android \
             --keyPassword=android \
