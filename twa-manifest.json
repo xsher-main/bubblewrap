@@ -8,8 +8,8 @@
   "backgroundColor": "#202123",
   "enableNotifications": true,
   "startUrl": "/",
-  "iconUrl": "icon.png",
-  "maskableIconUrl": "icon.png",
+  "iconUrl": "http://localhost:8080/icon.png",
+  "maskableIconUrl": "http://localhost:8080/icon.png",
   "splashScreenFadeOutDuration": 300,
   "signingKey": {
     "path": "./android.keystore",
