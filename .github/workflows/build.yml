@@ -1,0 +1,60 @@
+name: Build TWA APK with Bubblewrap
+
+on:
+  workflow_dispatch: # 支持网页端手动点击按钮触发
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Google Bubblewrap CLI
+        run: npm install -g @bubblewrap/cli
+
+      - name: Generate Android Signing Keystore
+        run: |
+          keytool -genkeypair \
+            -v \
+            -keystore android.keystore \
+            -alias android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass android \
+            -keypass android \
+            -dname "CN=ChatGPT TWA, OU=App, O=Self, L=City, S=State, C=US"
+
+      - name: Build Android APK
+        run: |
+          # 自动注入密码并构建，跳过在线 Manifest 探测以绕过 Cloudflare 拦截
+          bubblewrap build \
+            --manifest=twa-manifest.json \
+            --signingKeyPath=./android.keystore \
+            --signingKeyAlias=android \
+            --keyPassword=android \
+            --keyStorePassword=android \
+            --skipPwaValidation
+
+      - name: Upload Signed APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ChatGPT-TWA-Release-APK
+          path: app-release-signed.apk
+          if-no-files-found: error
